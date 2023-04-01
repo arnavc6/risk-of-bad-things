@@ -25,19 +25,51 @@
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
     <title>React App</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBB-cAkxTxBF4hdCCW1Ch4AVRVgVokPw5M&libraries=places"></script>
+    <script>
+      function initMap() {
+        var mapOptions = {
+          center: { lat: 37.7749, lng: -122.4194 },
+          zoom: 8
+        };
+        var map = new google.maps.Map(document.getElementById("map"), mapOptions);
+
+        map.addListener("click", function(event) {
+          var latLng = event.latLng;
+          var geocoder = new google.maps.Geocoder();
+          console.log("HHOOO");
+
+          geocoder.geocode({ location: latLng }, function(results, status) {
+            if (status === "OK") {
+              if (results[0]) {
+                var placeId = results[0].place_id;
+                var service = new google.maps.places.PlacesService(map);
+                
+                service.getDetails({ placeId: placeId }, function(place, status) {
+                  if (status === "OK") {
+                    console.log(place);
+                  } else {
+                    console.error("Unable to fetch place details");
+                  }
+                });
+              } else {
+                console.error("No results found");
+              }
+            } else {
+              console.error("Geocoder failed due to: " + status);
+            }
+          });
+        });
+      }
+    </script>
   </head>
-  <body>
+  <body onload="initMap()">
+    <div id="map" style="height: 500px;"></div>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
+    <h1>Enter Address</h1>
+    <label for="Address">Address:</label>
+    <input type="text" id="Address" name="Address">
+    <button onclick="window.location.href='location.html'">Enter</button>
   </body>
 </html>
