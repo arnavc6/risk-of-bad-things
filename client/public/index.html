@@ -8,6 +8,7 @@
   <meta name="theme-color" content="#000000" />
   <meta name="description" content="Web site created using create-react-app" />
   <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+  <link rel="stylesheet" href="style.css">
   <!--
       manifest.json provides metadata used when your web app is installed on a
       user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
@@ -34,77 +35,120 @@
       var map = new google.maps.Map(document.getElementById("map"), mapOptions);
 
       map.addListener("click", function (event) {
-        var latLng = event.latLng;
-        var geocoder = new google.maps.Geocoder();
-        console.log("HHOOO");
+    var latLng = event.latLng;
+    var geocoder = new google.maps.Geocoder();
+    var latitude = event.latLng.lat();
+    var longitude = event.latLng.lng();
+    console.log("Latitude: " + latitude + ", Longitude: " + longitude);
+    const url = `http://localhost:5000/${latitude}/${longitude}`;
+    fetch(url)
+  .then(response => {
+    if (response.ok) {
+      return response.json();
+    } else {
+      throw new Error("Failed to fetch location data");
+    }
+  })
+  .then(data => {
+    console.log(data);
+  })
+  .catch(error => {
+    console.error(error);
+  });
+    console.log("HHOOO");
 
-        geocoder.geocode({ location: latLng }, function (results, status) {
-          if (status === "OK") {
-            if (results[0]) {
-              var placeId = results[0].place_id;
-              var service = new google.maps.places.PlacesService(map);
+    geocoder.geocode({ location: latLng }, function (results, status) {
+      if (status === "OK") {
+        if (results[0]) {
+          var placeId = results[0].place_id;
+          var service = new google.maps.places.PlacesService(map);
 
-              service.getDetails({ placeId: placeId }, function (place, status) {
-                if (status === "OK") {
-                  console.log(place);
-                } else {
-                  console.error("Unable to fetch place details");
-                }
+          service.getDetails({ placeId: placeId }, function (place, status) {
+            if (status === "OK") {
+              console.log(place);
+
+              // Create a marker for the selected place
+              var marker = new google.maps.Marker({
+                map: map,
+                position: place.geometry.location,
+                title: place.name
+              });
+
+              // Create an info window for the marker
+              var infoWindow = new google.maps.InfoWindow({
+                content: place.name
+              });
+
+              // Show the info window when the marker is clicked
+              marker.addListener("click", function() {
+                infoWindow.open(map, marker);
               });
             } else {
-              console.error("No results found");
+              console.error("Unable to fetch place details");
             }
-          } else {
-            console.error("Geocoder failed due to: " + status);
-          }
-        });
+          });
+        } else {
+          console.error("No results found");
+        }
+      } else {
+        console.error("Geocoder failed due to: " + status);
+      }
+    });
+  });
+
+  var input = document.getElementById("Address");
+  var searchBox = new google.maps.places.SearchBox(input);
+
+  // Custom position
+  map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(input);
+
+  searchBox.addListener("places_changed", function (event) {
+    var places = searchBox.getPlaces();
+    if (places.length == 0) {
+      return;
+    }
+
+    // For each place, get the icon, name and location.
+    var bounds = new google.maps.LatLngBounds();
+    places.forEach(function (place) {
+      if (!place.geometry) {
+        console.log("Returned place contains no geometry");
+        return;
+      }
+
+      var icon = {
+        url: place.icon,
+        size: new google.maps.Size(71, 71),
+        origin: new google.maps.Point(0, 0),
+        anchor: new google.maps.Point(17, 34),
+        scaledSize: new google.maps.Size(25, 25),
+      };
+
+      // Create a marker for each place.
+      var marker = new google.maps.Marker({
+        map: map,
+        icon: icon,
+        title: place.name,
+        position: place.geometry.location,
       });
 
-      var input = document.getElementById("Address");
-      var searchBox = new google.maps.places.SearchBox(input);
+      // Create an info window for the marker
+      var infoWindow = new google.maps.InfoWindow({
+        content: place.name
+      });
 
+      // Show the info window when the marker is clicked
+      marker.addListener("click", function() {
+        infoWindow.open(map, marker);
+      });
 
-      // Custom position
-      map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(input);
-
-      searchBox.addListener("places_changed", function (event) {
-        var places = searchBox.getPlaces();
-        if (places.length == 0) {
-          return;
-        }
-
-        // For each place, get the icon, name and location.
-        var bounds = new google.maps.LatLngBounds();
-        places.forEach(function (place) {
-          if (!place.geometry) {
-            console.log("Returned place contains no geometry");
-            return;
-          }
-
-          var icon = {
-            url: place.icon,
-            size: new google.maps.Size(71, 71),
-            origin: new google.maps.Point(0, 0),
-            anchor: new google.maps.Point(17, 34),
-            scaledSize: new google.maps.Size(25, 25),
-          };
-
-          // Create a marker for each place.
-          var marker = new google.maps.Marker({
-            map: map,
-            icon: icon,
-            title: place.name,
-            position: place.geometry.location,
-          });
-
-
-          if (place.geometry.viewport) {
-            // Only geocodes have viewport.
-            bounds.union(place.geometry.viewport);
-          } else {
-            bounds.extend(place.geometry.location);
-          }
-        });
+      if (place.geometry.viewport) {
+        // Only geocodes have viewport.
+        bounds.union(place.geometry.viewport);
+      } else {
+        bounds.extend(place.geometry.location);
+      }
+    });
         map.fitBounds(bounds);
       });
 
@@ -113,12 +157,14 @@
 </head>
 
 <body onload="initMap()">
+  <link rel="stylesheet" href="style.css">
   <div id="map" style="height: 450px;"></div>
   <noscript>You need to enable JavaScript to run this app.</noscript>
   <label for="Address"></label>
   <input type="text" id="Address" name="Address">
   <!--   <button onclick="window.location.href='locationZoom.html'"></button> -->
   <div id="search-box"></div>
+  
 </body>
 
 
