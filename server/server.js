@@ -1,6 +1,8 @@
 const express = require("express");
 var fs = require('fs');
 const app = express();
+const cors = require("cors");
+app.use(cors());
 
 const data = fs.readFileSync('data/earthquakes.csv', 'utf8');
 const lines = data.split("\n");
@@ -17,25 +19,39 @@ const quakes = lines.map((line) => {
     return {lat: lat, long: long, mag: mag};
 });
 
-const lat = 0;
-const long = 0;
-console.log(quakes[0].lat);
-console.log(quakes[0].long);
-const distance = Math.sqrt(Math.pow(lat - quakes[0].lat, 2) + Math.pow(long - quakes[0].long, 2));
-console.log(distance);
-
-
 app.get("/:lat/:long", function(req, res) {
-    const lat = req.params.lat;
-    const long = req.params.long;
+    const lat = parseFloat(req.params.lat);
+    const long = parseFloat(req.params.long);
+    let risk = "";
     let nearby = [];
     for(let i = 0; i < quakes.length; i++){
         if(quakes[i].lat === null){
             continue;
         }
         const distance = Math.sqrt(Math.pow(lat - quakes[i].lat, 2) + Math.pow(long - quakes[i].long, 2));
+        if((distance < 1 && quakes[i].mag > 6) || (distance < 2 && quakes[i].mag > 7) || (distance < 3 && quakes[i].mag > 8) || (distance < 4 && quakes[i].mag > 9)){
+            risk = "critical";
+            nearby.push({distance: distance * 69, mag: quakes[i].mag});
+        }
+        else if(((distance < 2 && quakes[i].mag > 6) || (distance < 3 && quakes[i].mag > 7) || (distance < 4 && quakes[i].mag > 8) || (distance < 5 && quakes[i].mag > 9)) && risk !== "critical"){
+            risk = "very high";
+            nearby.push({distance: distance * 69, mag: quakes[i].mag});
+        }
+        else if(((distance < 2 && quakes[i].mag > 6) || (distance < 3 && quakes[i].mag > 7) || (distance < 4 && quakes[i].mag > 8) || (distance < 5 && quakes[i].mag > 9)) && risk !== "critical" && risk !== "very high"){
+            risk = "high";
+            nearby.push({distance: distance * 69, mag: quakes[i].mag});
+        }
+        else if(((distance < 2 && quakes[i].mag > 6) || (distance < 3 && quakes[i].mag > 7) || (distance < 4 && quakes[i].mag > 8) || (distance < 5 && quakes[i].mag > 9)) && risk !== "critical" && risk !== "very high" && risk !== "high"){
+            risk = "moderate";
+            nearby.push({distance: distance * 69, mag: quakes[i].mag});
+        }
+        else if(risk !== "critical" && risk !== "very high" && risk !== "high" && risk !== "moderate"){
+            risk = "low";
+        }
     }
-    res.end(JSON.stringify(filteredList));
+    const obj = JSON.stringify({risk: risk, nearby: nearby});
+    console.log(obj);
+    res.end(obj);
   });
 
-app.listen(3000);
+app.listen(5000);
